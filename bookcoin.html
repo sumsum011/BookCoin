@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BookCoin - Akıllı Kitap Paylaşım Sistemi</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f8fafc; color: #1e293b; padding: 20px; }
+        
+        /* Giriş Ekranı (Modal) */
+        #login-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .login-card { background: white; padding: 30px; border-radius: 16px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.2); }
+        .login-card h2 { color: #4f46e5; margin-bottom: 10px; font-size: 1.5rem; }
+        .login-card p { color: #64748b; font-size: 0.9rem; margin-bottom: 20px; }
+        .login-input, .login-select { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; outline: none; background: white; }
+        .login-input:focus, .login-select:focus { border-color: #4f46e5; }
+        .login-btn { width: 100%; padding: 12px; background: #4f46e5; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.2s; }
+        .login-btn:hover { background: #4338ca; }
+
+        /* Ana Uygulama Paneli */
+        #app-container { display: none; max-width: 600px; margin: 0 auto; }
+        .header-card { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 20px; box-shadow: 0 10px 25px rgba(79, 70, 229, 0.2); }
+        .header-card h1 { font-size: 1.5rem; margin-bottom: 5px; }
+        .user-welcome { font-size: 1rem; font-weight: 600; margin-bottom: 8px; color: #e0e7ff; }
+        
+        .credit-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(5px); padding: 8px 18px; border-radius: 20px; font-size: 1.1rem; border: 1px solid rgba(255,255,255,0.3); }
+        .coin-text { font-family: 'Impact', 'Arial Black', sans-serif; font-weight: 900; letter-spacing: 0.5px; color: #fef08a; }
+        .coin-icon { font-size: 1.2rem; }
+
+        .add-book-btn { display: block; width: 100%; padding: 12px; background: #10b981; color: white; text-align: center; border: none; border-radius: 10px; font-weight: bold; font-size: 1rem; cursor: pointer; margin-bottom: 20px; transition: 0.2s; }
+        .add-book-btn:hover { background: #059669; }
+
+        /* Kitap Kartları */
+        .grid-container { display: flex; flex-direction: column; gap: 15px; }
+        .book-card { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        .book-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .book-info h3 { font-size: 1.1rem; color: #0f172a; }
+        .book-info p { font-size: 0.85rem; color: #64748b; margin-top: 2px; }
+        
+        .tags-row { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+        .status-tag { display: inline-block; font-size: 0.75rem; padding: 3px 8px; border-radius: 6px; font-weight: 600; }
+        .available { background: #dcfce7; color: #166534; }
+        .borrowed { background: #fee2e2; color: #991b1b; }
+        .category-tag { background: #e0e7ff; color: #3730a3; font-size: 0.75rem; padding: 3px 8px; border-radius: 6px; font-weight: 600; }
+
+        .book-actions { display: flex; gap: 10px; align-items: center; justify-content: space-between; border-top: 1px solid #f1f5f9; padding-top: 10px; margin-top: 10px; }
+        .stars { color: #f59e0b; font-size: 0.9rem; cursor: pointer; }
+        
+        .action-btn { background: #6366f1; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.85rem; transition: 0.2s; }
+        .action-btn:hover { background: #4f46e5; }
+        .return-btn { background: #f59e0b; }
+        .return-btn:hover { background: #d97706; }
+        .empty-state { text-align: center; color: #94a3b8; padding: 30px; font-style: italic; }
+
+        /* Kitap Ekleme Modalı (Özel Pencere) */
+        #book-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); justify-content: center; align-items: center; z-index: 1000; }
+    </style>
+</head>
+<body>
+
+    <!-- GİRİŞ EKRANI -->
+    <div id="login-modal">
+        <div class="login-card">
+            <h2>📚 BookCoin Giriş</h2>
+            <p>Sisteme kaydol, ilk hediyen olan 20 BookCoin'i kazan!</p>
+            <input type="text" id="input-name" class="login-input" placeholder="Ad Soyad (Örn: Sümeyra Şen)">
+            <input type="text" id="input-no" class="login-input" placeholder="Okul Numarası">
+            <input type="text" id="input-class" class="login-input" placeholder="Sınıf (Örn: 10/A)">
+            <button class="login-btn" onclick="handleLogin()">Giriş Yap & Kaydol</button>
+        </div>
+    </div>
+
+    <!-- KİTAP EKLEME PENCERESİ -->
+    <div id="book-modal">
+        <div class="login-card">
+            <h2>📖 Rafta Yeni Kitap Ekle</h2>
+            <p>Kitap bilgilerini gir, +10 BookCoin kazan!</p>
+            <input type="text" id="input-book-title" class="login-input" placeholder="Kitap Adı ve Yazarı">
+            <select id="input-book-category" class="login-select">
+                <option value="Bilim Kurgu">🚀 Bilim Kurgu</option>
+                <option value="Roman / Edebiyat">📖 Roman / Edebiyat</option>
+                <option value="Bilim / Araştırma">🔬 Bilim / Araştırma</option>
+                <option value="Tarih">📜 Tarih</option>
+                <option value="Felsefe">💭 Felsefe</option>
+                <option value="Kişisel Gelişim">🎯 Kişisel Gelişim</option>
+                <option value="Şiir">✍️ Şiir</option>
+            </select>
+            <button class="login-btn" onclick="saveNewBook()">Kitabı Rafta Paylaş</button>
+            <button onclick="closeBookModal()" style="background:none; border:none; color:#64748b; margin-top:10px; cursor:pointer; font-size:0.9rem;">Vazgeç</button>
+        </div>
+    </div>
+
+    <!-- ANA UYGULAMA -->
+    <div id="app-container">
+        <div class="header-card">
+            <h1>📚 Oku-Paylaş Rafı</h1>
+            <div class="user-welcome" id="display-user">Öğrenci: </div>
+            <div class="credit-badge">
+                <span class="coin-icon">🪙</span> 
+                <span><span class="coin-text">BookCoin</span>: <span id="user-credits">20</span> Puan</span>
+            </div>
+        </div>
+
+        <button class="add-book-btn" onclick="openBookModal()">➕ Rafta Yeni Kitap Ekle (+10 BookCoin)</button>
+
+        <div class="grid-container" id="book-list">
+            <div class="empty-state" id="empty-msg">Henüz rafta kitap yok. İlk kitabı sen ekle!</div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = "";
+        let userCredits = 20;
+        let books = [];
+
+        function handleLogin() {
+            let name = document.getElementById('input-name').value.trim();
+            let schoolNo = document.getElementById('input-no').value.trim();
+            let studentClass = document.getElementById('input-class').value.trim();
+
+            if (!name || !schoolNo || !studentClass) {
+                alert("Lütfen tüm alanları doldur!");
+                return;
+            }
+
+            currentUser = `${name} (${studentClass} - No: ${schoolNo})`;
+            document.getElementById('display-user').innerText = "Öğrenci: " + currentUser;
+            document.getElementById('user-credits').innerText = userCredits;
+
+            document.getElementById('login-modal').style.display = 'none';
+            document.getElementById('app-container').style.display = 'block';
+        }
+
+        function openBookModal() {
+            document.getElementById('book-modal').style.display = 'flex';
+        }
+
+        function closeBookModal() {
+            document.getElementById('book-modal').style.display = 'none';
+        }
+
+        function saveNewBook() {
+            let title = document.getElementById('input-book-title').value.trim();
+            let category = document.getElementById('input-book-category').value;
+
+            if (!title) {
+                alert("Lütfen kitap adını yaz!");
+                return;
+            }
+
+            userCredits += 10;
+            document.getElementById('user-credits').innerText = userCredits;
+
+            books.unshift({
+                title: title,
+                owner: currentUser,
+                status: 'available',
+                borrower: null,
+                rating: 5.0,
+                voteCount: 1,
+                category: category
+            });
+
+            document.getElementById('input-book-title').value = "";
+            closeBookModal();
+            renderBooks();
+            alert(`Tebrikler! Kitabını eklediğin için +10 BookCoin kazandın.`);
+        }
+
+        function renderBooks() {
+            let list = document.getElementById('book-list');
+            list.innerHTML = "";
+
+            if (books.length === 0) {
+                list.innerHTML = `<div class="empty-state">Henüz rafta kitap yok. İlk kitabı sen ekle!</div>`;
+                return;
+            }
+
+            books.forEach((book, index) => {
+                let card = document.createElement('div');
+                card.className = 'book-card';
+                
+                let statusClass = book.status === 'available' ? 'available' : 'borrowed';
+                let statusText = book.status === 'available' ? '🟢 Rafta Hazır' : `🔴 Ödünçte (${book.borrower})`;
+                
+                let actionButton = "";
+                if (book.status === 'available') {
+                    actionButton = `<button class="action-btn" onclick="borrowBook(${index})">Ödünç Al (-5 Coin)</button>`;
+                } else if (book.borrower === currentUser) {
+                    actionButton = `<button class="action-btn return-btn" onclick="returnBook(${index})">Rafa Geri Koy (+3 Coin)</button>`;
+                } else {
+                    actionButton = `<span style="font-size:0.85rem; color:#94a3b8; font-weight:600;">Dolu</span>`;
+                }
+
+                card.innerHTML = `
+                    <div class="book-top">
+                        <div class="book-info">
+                            <h3>${book.title}</h3>
+                            <p>Ekleyen: ${book.owner}</p>
+                            <div class="tags-row">
+                                <span class="status-tag ${statusClass}">${statusText}</span>
+                                <span class="category-tag">${book.category}</span>
+                            </div>
+                        </div>
+                        <div class="stars" onclick="rateBook(${index})">
+                            ⭐ ${book.rating} (${book.voteCount})
+                        </div>
+                    </div>
+                    <div class="book-actions">
+                        <span style="font-size: 0.8rem; color: #64748b;">Sistem: QR Uyumlu</span>
+                        ${actionButton}
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        function borrowBook(index) {
+            if (userCredits >= 5) {
+                userCredits -= 5;
+                document.getElementById('user-credits').innerText = userCredits;
+                books[index].status = 'borrowed';
+                books[index].borrower = currentUser;
+                renderBooks();
+                alert(`"${books[index].title}" kitabını ödünç aldın. 5 BookCoin düşüldü.`);
+            } else {
+                alert("Yeterli BookCoin'in yok! Rafa yeni bir kitap ekleyerek coin kazanabilirsin.");
+            }
+        }
+
+        function returnBook(index) {
+            userCredits += 3;
+            document.getElementById('user-credits').innerText = userCredits;
+            books[index].status = 'available';
+            books[index].borrower = null;
+            renderBooks();
+            alert(`Kitabı rafa başarıyla geri koydun! Hesabına +3 BookCoin iade edildi.`);
+        }
+
+        function rateBook(index) {
+            let score = prompt("Bu kitaba 1 ile 5 arasında kaç yıldız veriyorsun?", "5");
+            let num = parseFloat(score);
+            if (num >= 1 && num <= 5) {
+                let currentTotal = books[index].rating * books[index].voteCount;
+                books[index].voteCount += 1;
+                books[index].rating = ((currentTotal + num) / books[index].voteCount).toFixed(1);
+                renderBooks();
+                alert("Puanın kaydedildi, teşekkürler!");
+            }
+        }
+    </script>
+</body>
+</html>
